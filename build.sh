@@ -6,22 +6,38 @@ if [ x"$VERSION" = "x" ] ; then
   exit 1
 fi
 
+BUILD_MODE=$2
+if [ x"$BUILD_MODE" = "x" ] ; then
+  BUILD_MODE=local
+fi
+
 ES_DIR=elasticsearch-${VERSION}
 ES_BINARY_URL=https://artifacts.elastic.co/downloads/elasticsearch/${ES_DIR}.zip
 ES_SOURCE_URL=https://github.com/elastic/elasticsearch/archive/v${VERSION}.zip
 BUILD_DIR=target
 
-rm -rf $BUILD_DIR
 mkdir -p $BUILD_DIR
-
 cd $BUILD_DIR
+rm -rf $ES_DIR
 
 # Download source zip
-wget $ES_SOURCE_URL
+if [ ! -f v${VERSION}.zip ] ; then
+  wget $ES_SOURCE_URL
+fi
+if [ ! -f v${VERSION}.zip ] ; then
+  echo "Failed to download v${VERSION}.zip."
+  exit 1
+fi
 unzip -n v${VERSION}.zip
 
 # Download binary zip
-wget $ES_BINARY_URL
+if [ ! -f ${ES_DIR}.zip ] ; then
+  wget $ES_BINARY_URL
+fi
+if [ ! -f ${ES_DIR}.zip ] ; then
+  echo "Failed to download ${ES_DIR}.zip."
+  exit 1
+fi
 unzip -n ${ES_DIR}.zip
 
 function generate_pom() {
@@ -52,6 +68,13 @@ function generate_pom() {
       POMXML_FILE=`jar tf $JAR_FILE | grep pom.xml`
       jar xf $JAR_FILE $POMXML_FILE
       GROUP_ID=`cat $POMXML_FILE | xmllint --format - | sed -e "s/<project [^>]*>/<project>/" | xmllint --xpath "/project/groupId/text()" -`
+      if [ x"$GROUP_ID" = "x" ] ; then
+        GROUP_ID=`cat $POMXML_FILE | xmllint --format - | sed -e "s/<project [^>]*>/<project>/" | xmllint --xpath "/project/parent/groupId/text()" -`
+      fi
+    fi
+    if [ x"$GROUP_ID" = "x" -o x"$JAR_VERSION" = "x" ] ; then
+      echo "[$JAR_NAME] groupId or version is empty."
+      exit 1
     fi
     echo '    <dependency>' >> $POM_FILE
     echo '      <groupId>'$GROUP_ID'</groupId>' >> $POM_FILE
@@ -112,10 +135,15 @@ function deploy_files() {
   BINARY_FILE=${MODULE_NAME}-${MODULE_VERSION}.jar
   SOURCE_FILE=${MODULE_NAME}-${MODULE_VERSION}-sources.jar
 
-  echo "Deploying $POM_FILE"
-  mvn install:install-file -Dfile=$BINARY_FILE -DpomFile=$POM_FILE
-  mvn install:install-file -Dfile=$SOURCE_FILE -DpomFile=$POM_FILE -Dclassifier=sources
-  # TODO remote repository
+  if [ x"$BUILD_MODE" = "xlocal" ] ; then
+    echo "Deploying $POM_FILE to a local repository"
+    mvn install:install-file -Dfile=$BINARY_FILE -DpomFile=$POM_FILE
+    mvn install:install-file -Dfile=$SOURCE_FILE -DpomFile=$POM_FILE -Dclassifier=sources
+  elif [ x"$BUILD_MODE" = "xremote" ] ; then
+    echo "Deploying $POM_FILE to a local repository"
+    mvn gpg:sign-and-deploy-file -Durl=https://oss.sonatype.org/service/local/staging/deploy/maven2/ -DrepositoryId=sonatype-nexus-staging -DpomFile=$POM_FILE -Dfile=$BINARY_FILE
+    mvn gpg:sign-and-deploy-file -Durl=https://oss.sonatype.org/service/local/staging/deploy/maven2/ -DrepositoryId=sonatype-nexus-staging -DpomFile=$POM_FILE -Dfile=$SOURCE_FILE -Dclassifier=sources
+  fi
 
   popd > /dev/null
 }
