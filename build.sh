@@ -1,5 +1,8 @@
 #!/bin/bash
 
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
 VERSION=$1
 if [ x"$VERSION" = "x" ] ; then
   echo "No version."
@@ -28,7 +31,7 @@ if [ ! -f v${VERSION}.zip ] ; then
   echo "Failed to download v${VERSION}.zip."
   exit 1
 fi
-unzip -n v${VERSION}.zip
+unzip -n v${VERSION}.zip > /dev/null
 
 # Download binary zip
 if [ ! -f ${ES_DIR}.zip ] ; then
@@ -38,7 +41,7 @@ if [ ! -f ${ES_DIR}.zip ] ; then
   echo "Failed to download ${ES_DIR}.zip."
   exit 1
 fi
-unzip -n ${ES_DIR}.zip
+unzip -n ${ES_DIR}.zip > /dev/null
 
 function generate_pom() {
   MODULE_NAME=$1
@@ -127,6 +130,20 @@ function generate_source() {
   popd > /dev/null
 }
 
+function generate_javadoc() {
+  MODULE_NAME=$1
+
+  pushd  ${ES_DIR}/modules/${MODULE_NAME} > /dev/null
+  JAVADOC_FILE=${MODULE_NAME}-${MODULE_VERSION}-javadoc.jar
+
+  echo "Generating $JAVADOC_FILE"
+  mkdir -p src/main/javadoc
+  javadoc -locale en -d src/main/javadoc -sourcepath src/main/java -subpackages org
+  jar cvf $JAVADOC_FILE -C src/main/javadoc/ . > /dev/null
+
+  popd > /dev/null
+}
+
 function deploy_files() {
   MODULE_NAME=$1
 
@@ -134,15 +151,18 @@ function deploy_files() {
   POM_FILE=${MODULE_NAME}-${MODULE_VERSION}.pom
   BINARY_FILE=${MODULE_NAME}-${MODULE_VERSION}.jar
   SOURCE_FILE=${MODULE_NAME}-${MODULE_VERSION}-sources.jar
+  JAVADOC_FILE=${MODULE_NAME}-${MODULE_VERSION}-javadoc.jar
 
   if [ x"$BUILD_MODE" = "xlocal" ] ; then
     echo "Deploying $POM_FILE to a local repository"
     mvn install:install-file -Dfile=$BINARY_FILE -DpomFile=$POM_FILE
     mvn install:install-file -Dfile=$SOURCE_FILE -DpomFile=$POM_FILE -Dclassifier=sources
+    mvn install:install-file -Dfile=$JAVADOC_FILE -DpomFile=$POM_FILE -Dclassifier=javadoc
   elif [ x"$BUILD_MODE" = "xremote" ] ; then
     echo "Deploying $POM_FILE to a local repository"
     mvn gpg:sign-and-deploy-file -Durl=https://oss.sonatype.org/service/local/staging/deploy/maven2/ -DrepositoryId=sonatype-nexus-staging -DpomFile=$POM_FILE -Dfile=$BINARY_FILE
     mvn gpg:sign-and-deploy-file -Durl=https://oss.sonatype.org/service/local/staging/deploy/maven2/ -DrepositoryId=sonatype-nexus-staging -DpomFile=$POM_FILE -Dfile=$SOURCE_FILE -Dclassifier=sources
+    mvn gpg:sign-and-deploy-file -Durl=https://oss.sonatype.org/service/local/staging/deploy/maven2/ -DrepositoryId=sonatype-nexus-staging -DpomFile=$POM_FILE -Dfile=$JAVADOC_FILE -Dclassifier=javadoc
   fi
 
   popd > /dev/null
@@ -151,6 +171,7 @@ function deploy_files() {
 for MODULE_NAME in `/bin/ls -d ${ES_DIR}/modules/*/ | sed -e "s/.*\/\([^\/]*\)\//\1/"` ; do
   generate_pom $MODULE_NAME
   generate_source $MODULE_NAME
+  generate_javadoc $MODULE_NAME
   deploy_files $MODULE_NAME
 done
 
