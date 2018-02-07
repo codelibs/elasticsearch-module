@@ -44,9 +44,10 @@ fi
 unzip -n ${ES_DIR}.zip > /dev/null
 
 function generate_pom() {
-  MODULE_NAME=$1
+  MODULE_DIR=$1
+  MODULE_NAME=$2
 
-  pushd  ${ES_DIR}/modules/${MODULE_NAME} > /dev/null
+  pushd  ${ES_DIR}/modules/${MODULE_DIR} > /dev/null
   MODULE_VERSION=`/bin/ls ${MODULE_NAME}*.jar | sed -e "s/^${MODULE_NAME}-\(.*\).jar/\1/"`
   POM_FILE=${MODULE_NAME}-${MODULE_VERSION}.pom
 
@@ -67,7 +68,10 @@ function generate_pom() {
       JAR_VERSION=`echo $JAR_VERSION | sed -e "s/\-$CLASSIFIER$//"`
     fi
     GROUP_ID=`grep :$JAR_NAME: build.gradle | sed -e "s/.*compile *['\"]\(.*\):$JAR_NAME:.*/\1/"`
-    if [ x"$GROUP_ID" = "x" ] ; then
+    if [ x"$JAR_NAME" = "xelasticsearch-scripting-painless-spi" ] ; then
+      GROUP_ID="org.codelibs.elasticsearch.module"
+      JAR_NAME="scripting-painless-spi"
+    elif [ x"$GROUP_ID" = "x" ] ; then
       POMXML_FILE=`jar tf $JAR_FILE | grep pom.xml`
       jar xf $JAR_FILE $POMXML_FILE
       GROUP_ID=`cat $POMXML_FILE | xmllint --format - | sed -e "s/<project [^>]*>/<project>/" | xmllint --xpath "/project/groupId/text()" -`
@@ -119,9 +123,10 @@ function generate_pom() {
 }
 
 function generate_source() {
-  MODULE_NAME=$1
+  MODULE_DIR=$1
+  MODULE_NAME=$2
 
-  pushd  ${ES_DIR}/modules/${MODULE_NAME}/src/main/java > /dev/null
+  pushd  ${ES_DIR}/modules/${MODULE_DIR}/src/main/java > /dev/null
   SOURCE_FILE=${MODULE_NAME}-${MODULE_VERSION}-sources.jar
 
   echo "Generating $SOURCE_FILE"
@@ -131,9 +136,10 @@ function generate_source() {
 }
 
 function generate_javadoc() {
-  MODULE_NAME=$1
+  MODULE_DIR=$1
+  MODULE_NAME=$2
 
-  pushd  ${ES_DIR}/modules/${MODULE_NAME} > /dev/null
+  pushd  ${ES_DIR}/modules/${MODULE_DIR} > /dev/null
   JAVADOC_FILE=${MODULE_NAME}-${MODULE_VERSION}-javadoc.jar
 
   echo "Generating $JAVADOC_FILE"
@@ -145,9 +151,10 @@ function generate_javadoc() {
 }
 
 function deploy_files() {
-  MODULE_NAME=$1
+  MODULE_DIR=$1
+  MODULE_NAME=$2
 
-  pushd  ${ES_DIR}/modules/${MODULE_NAME} > /dev/null
+  pushd  ${ES_DIR}/modules/${MODULE_DIR} > /dev/null
   POM_FILE=${MODULE_NAME}-${MODULE_VERSION}.pom
   BINARY_FILE=${MODULE_NAME}-${MODULE_VERSION}.jar
   SOURCE_FILE=${MODULE_NAME}-${MODULE_VERSION}-sources.jar
@@ -169,11 +176,30 @@ function deploy_files() {
 }
 
 for MODULE_NAME in `/bin/ls -d ${ES_DIR}/modules/*/ | sed -e "s/.*\/\([^\/]*\)\//\1/"` ; do
-  generate_pom $MODULE_NAME
-  generate_source $MODULE_NAME
-  generate_javadoc $MODULE_NAME
-  deploy_files $MODULE_NAME
+  generate_pom $MODULE_NAME $MODULE_NAME
+  generate_source $MODULE_NAME $MODULE_NAME
+  generate_javadoc $MODULE_NAME $MODULE_NAME
+  deploy_files $MODULE_NAME $MODULE_NAME
 done
+
+function deplopy_lang_paiinless_spi() {
+  MODULE_DIR=lang-painless/spi
+  MODULE_NAME=scripting-painless-spi
+  JAR_FILE=`/bin/ls $ES_DIR/modules/lang-painless/elasticsearch-scripting-painless-spi-*.jar`
+  if [ ! -f $JAR_FILE ] ; then
+    return
+  fi
+  NEW_JAR_FILE=`echo $JAR_FILE | sed -e "s/elasticsearch-scripting-painless-spi/spi\/scripting-painless-spi/"`
+  ES_JAR_FILE=`echo $JAR_FILE | sed -e "s/elasticsearch-scripting-painless-spi/spi\/elasticsearch/"`
+  cp $JAR_FILE $NEW_JAR_FILE
+  touch $ES_JAR_FILE
+  generate_pom $MODULE_DIR $MODULE_NAME
+  generate_source $MODULE_DIR $MODULE_NAME
+  generate_javadoc $MODULE_DIR $MODULE_NAME
+  deploy_files $MODULE_DIR $MODULE_NAME
+}
+
+deplopy_lang_paiinless_spi
 
 echo "Modules:"
 grep ^classname ${ES_DIR}/modules/*/plugin-descriptor.properties | sed -e "s/.*classname=\(.*\)/\"\1\",/"
