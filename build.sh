@@ -73,6 +73,9 @@ function generate_pom() {
     if [ x"$JAR_NAME" = "xelasticsearch-scripting-painless-spi" ] ; then
       GROUP_ID="org.codelibs.elasticsearch.module"
       JAR_NAME="scripting-painless-spi"
+    elif [ x"$JAR_NAME" = "xelasticsearch-grok" ] ; then
+      GROUP_ID="org.codelibs.elasticsearch.lib"
+      JAR_NAME="grok"
     elif [ x"$GROUP_ID" = "x" ] ; then
       POMXML_FILE=`jar tf $JAR_FILE | grep pom.xml`
       jar xf $JAR_FILE $POMXML_FILE
@@ -184,8 +187,8 @@ function deplopy_lang_paiinless_spi() {
   MODULE_DIR=lang-painless/spi
   MODULE_NAME=scripting-painless-spi
   MODULE_TYPE=modules
-  JAR_FILE=`/bin/ls $ES_DIR/$MODULE_TYPE/lang-painless/elasticsearch-scripting-painless-spi-*.jar`
-  if [ ! -f $JAR_FILE ] ; then
+  JAR_FILE=`/bin/ls $ES_DIR/$MODULE_TYPE/lang-painless/elasticsearch-scripting-painless-spi-*.jar 2>/dev/null`
+  if [ x"$JAR_FILE" = "x" ] ; then
     return
   fi
   NEW_JAR_FILE=`echo $JAR_FILE | sed -e "s/elasticsearch-scripting-painless-spi/spi\/scripting-painless-spi/"`
@@ -202,8 +205,8 @@ function deplopy_plugin_classloader() {
   MODULE_DIR=plugin-classloader
   MODULE_NAME=plugin-classloader
   MODULE_TYPE=libs
-  JAR_FILE=`/bin/ls $ES_DIR/lib/plugin-classloader-*.jar`
-  if [ ! -f $JAR_FILE ] ; then
+  JAR_FILE=`/bin/ls $ES_DIR/lib/plugin-classloader-*.jar 2>/dev/null`
+  if [ x"$JAR_FILE" = "x" ] ; then
     return
   fi
   cp $JAR_FILE $ES_DIR/$MODULE_TYPE/plugin-classloader
@@ -213,10 +216,30 @@ function deplopy_plugin_classloader() {
   deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
 }
 
+function deplopy_grok() {
+  MODULE_DIR=grok
+  MODULE_NAME=grok
+  MODULE_TYPE=libs
+  JAR_FILE=`/bin/ls $ES_DIR/modules/ingest-common/elasticsearch-grok-*.jar 2>/dev/null`
+  if [ x"$JAR_FILE" = "x" ] ; then
+    return
+  fi
+  cp $JAR_FILE $ES_DIR/$MODULE_TYPE/$MODULE_NAME/`basename $JAR_FILE|sed -e "s/elasticsearch-grok-/grok-/"`
+  generate_pom $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  generate_source $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  generate_javadoc $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+}
+
 deplopy_lang_paiinless_spi
 deplopy_plugin_classloader
+deplopy_grok
 
 for MODULE_NAME in `/bin/ls -d ${ES_DIR}/modules/*/ | sed -e "s/.*\/\([^\/]*\)\//\1/"` ; do
+  /bin/ls ${ES_DIR}/modules/${MODULE_NAME}/*.jar >/dev/null 2>&1
+  if [ $? != 0 ] ; then
+    continue
+  fi
   generate_pom $MODULE_NAME $MODULE_NAME modules
   generate_source $MODULE_NAME $MODULE_NAME modules
   generate_javadoc $MODULE_NAME $MODULE_NAME modules
