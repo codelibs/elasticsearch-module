@@ -235,7 +235,7 @@ deplopy_lang_paiinless_spi
 deplopy_plugin_classloader
 deplopy_grok
 
-for MODULE_NAME in `/bin/ls -d ${ES_DIR}/modules/*/ | sed -e "s/.*\/\([^\/]*\)\//\1/"` ; do
+for MODULE_NAME in `/bin/ls -d ${ES_DIR}/modules/*/ | grep -v x-pack | sed -e "s/.*\/\([^\/]*\)\//\1/"` ; do
   /bin/ls ${ES_DIR}/modules/${MODULE_NAME}/*.jar >/dev/null 2>&1
   if [ $? != 0 ] ; then
     continue
