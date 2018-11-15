@@ -15,7 +15,8 @@ if [ x"$BUILD_MODE" = "x" ] ; then
 fi
 
 ES_DIR=elasticsearch-${VERSION}
-ES_BINARY_URL=https://artifacts.elastic.co/downloads/elasticsearch/${ES_DIR}.zip
+ES_BINARY_FILE=elasticsearch-oss-${VERSION}
+ES_BINARY_URL=https://artifacts.elastic.co/downloads/elasticsearch/${ES_BINARY_FILE}.zip
 ES_SOURCE_URL=https://github.com/elastic/elasticsearch/archive/v${VERSION}.zip
 BUILD_DIR=target
 
@@ -34,14 +35,16 @@ fi
 unzip -n v${VERSION}.zip > /dev/null
 
 # Download binary zip
-if [ ! -f ${ES_DIR}.zip ] ; then
+if [ ! -f ${ES_BINARY_FILE}.zip ] ; then
   wget $ES_BINARY_URL
 fi
-if [ ! -f ${ES_DIR}.zip ] ; then
-  echo "Failed to download ${ES_DIR}.zip."
+if [ ! -f ${ES_BINARY_FILE}.zip ] ; then
+  echo "Failed to download ${ES_BINARY_FILE}.zip."
   exit 1
 fi
-unzip -n ${ES_DIR}.zip > /dev/null
+unzip -n ${ES_BINARY_FILE}.zip > /dev/null
+cp -r $ES_BINARY_FILE $ES_DIR
+rm -rf $ES_BINARY_FILE
 
 function generate_pom() {
   MODULE_DIR=$1
@@ -49,6 +52,8 @@ function generate_pom() {
   MODULE_TYPE=$3
 
   pushd  ${ES_DIR}/$MODULE_TYPE/${MODULE_DIR} > /dev/null
+  JAR_FILE=`/bin/ls ${MODULE_NAME}*.jar `
+  mv $JAR_FILE `echo $JAR_FILE | sed -e "s/-client//"`
   MODULE_VERSION=`/bin/ls ${MODULE_NAME}*.jar | sed -e "s/^${MODULE_NAME}-\(.*\).jar/\1/"`
   POM_FILE=${MODULE_NAME}-${MODULE_VERSION}.pom
   GROUP_ID="org.codelibs.elasticsearch."`echo $MODULE_TYPE | sed -e "s/s$//"`
@@ -76,6 +81,9 @@ function generate_pom() {
     elif [ x"$JAR_NAME" = "xelasticsearch-grok" ] ; then
       GROUP_ID="org.codelibs.elasticsearch.lib"
       JAR_NAME="grok"
+    elif [ x"$JAR_NAME" = "xelasticsearch-dissect" ] ; then
+      GROUP_ID="org.codelibs.elasticsearch.lib"
+      JAR_NAME="dissect"
     elif [ x"$GROUP_ID" = "x" ] ; then
       POMXML_FILE=`jar tf $JAR_FILE | grep pom.xml`
       jar xf $JAR_FILE $POMXML_FILE
@@ -231,9 +239,25 @@ function deplopy_grok() {
   deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
 }
 
+function deplopy_dissect() {
+  MODULE_DIR=dissect
+  MODULE_NAME=dissect
+  MODULE_TYPE=libs
+  JAR_FILE=`/bin/ls $ES_DIR/modules/ingest-common/elasticsearch-dissect-*.jar 2>/dev/null`
+  if [ x"$JAR_FILE" = "x" ] ; then
+    return
+  fi
+  cp $JAR_FILE $ES_DIR/$MODULE_TYPE/$MODULE_NAME/`basename $JAR_FILE|sed -e "s/elasticsearch-dissect-/dissect-/"`
+  generate_pom $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  generate_source $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  generate_javadoc $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+}
+
 deplopy_lang_paiinless_spi
 deplopy_plugin_classloader
 deplopy_grok
+deplopy_dissect
 
 for MODULE_NAME in `/bin/ls -d ${ES_DIR}/modules/*/ | grep -v x-pack | sed -e "s/.*\/\([^\/]*\)\//\1/"` ; do
   /bin/ls ${ES_DIR}/modules/${MODULE_NAME}/*.jar >/dev/null 2>&1
