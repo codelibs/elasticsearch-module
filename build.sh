@@ -43,8 +43,6 @@ if [ ! -f ${ES_BINARY_FILE}.zip ] ; then
   exit 1
 fi
 unzip -n ${ES_BINARY_FILE}.zip > /dev/null
-cp -r $ES_BINARY_FILE $ES_DIR
-rm -rf $ES_BINARY_FILE
 
 function generate_pom() {
   MODULE_DIR=$1
