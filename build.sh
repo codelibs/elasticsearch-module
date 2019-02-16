@@ -15,7 +15,7 @@ if [ x"$BUILD_MODE" = "x" ] ; then
 fi
 
 ES_DIR=elasticsearch-${VERSION}
-ES_BINARY_FILE=elasticsearch-oss-${VERSION}
+ES_BINARY_FILE=elasticsearch-oss-${VERSION}-windows-x86_64
 ES_BINARY_URL=https://artifacts.elastic.co/downloads/elasticsearch/${ES_BINARY_FILE}.zip
 ES_SOURCE_URL=https://github.com/elastic/elasticsearch/archive/v${VERSION}.zip
 BUILD_DIR=target
@@ -79,6 +79,9 @@ function generate_pom() {
     elif [ x"$JAR_NAME" = "xelasticsearch-grok" ] ; then
       GROUP_ID="org.codelibs.elasticsearch.lib"
       JAR_NAME="grok"
+    elif [ x"$JAR_NAME" = "xelasticsearch-ssl-config" ] ; then
+      GROUP_ID="org.codelibs.elasticsearch.lib"
+      JAR_NAME="ssl-config"
     elif [ x"$JAR_NAME" = "xelasticsearch-dissect" ] ; then
       GROUP_ID="org.codelibs.elasticsearch.lib"
       JAR_NAME="dissect"
@@ -129,6 +132,15 @@ function generate_pom() {
   echo '  <scm>' >> $POM_FILE
   echo '    <url>git@github.com:codelibs/elasticsearch-module.git</url>' >> $POM_FILE
   echo '  </scm>' >> $POM_FILE
+  echo '  <repositories>' >> $POM_FILE
+  echo '    <repository>' >> $POM_FILE
+  echo '      <id>elastic-lucene-snapshots</id>' >> $POM_FILE
+  echo '      <name>Elastic Lucene Snapshots</name>' >> $POM_FILE
+  echo '      <url>http://s3.amazonaws.com/download.elasticsearch.org/lucenesnapshots/83f9835</url>' >> $POM_FILE
+  echo '      <releases><enabled>true</enabled></releases>' >> $POM_FILE
+  echo '      <snapshots><enabled>false</enabled></snapshots>' >> $POM_FILE
+  echo '    </repository>' >> $POM_FILE
+  echo '  </repositories>' >> $POM_FILE
   echo '</project>' >> $POM_FILE
   popd > /dev/null
 }
@@ -237,6 +249,21 @@ function deplopy_grok() {
   deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
 }
 
+function deplopy_ssl_config() {
+  MODULE_DIR=ssl-config
+  MODULE_NAME=ssl-config
+  MODULE_TYPE=libs
+  JAR_FILE=`/bin/ls $ES_DIR/modules/reindex/elasticsearch-ssl-config-*.jar 2>/dev/null`
+  if [ x"$JAR_FILE" = "x" ] ; then
+    return
+  fi
+  cp $JAR_FILE $ES_DIR/$MODULE_TYPE/$MODULE_NAME/`basename $JAR_FILE|sed -e "s/elasticsearch-ssl-config-/ssl-config-/"`
+  generate_pom $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  generate_source $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  generate_javadoc $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+}
+
 function deplopy_dissect() {
   MODULE_DIR=dissect
   MODULE_NAME=dissect
@@ -255,6 +282,7 @@ function deplopy_dissect() {
 deplopy_lang_paiinless_spi
 deplopy_plugin_classloader
 deplopy_grok
+deplopy_ssl_config
 deplopy_dissect
 
 for MODULE_NAME in `/bin/ls -d ${ES_DIR}/modules/*/ | grep -v x-pack | sed -e "s/.*\/\([^\/]*\)\//\1/"` ; do
