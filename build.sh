@@ -132,15 +132,6 @@ function generate_pom() {
   echo '  <scm>' >> $POM_FILE
   echo '    <url>git@github.com:codelibs/elasticsearch-module.git</url>' >> $POM_FILE
   echo '  </scm>' >> $POM_FILE
-  echo '  <repositories>' >> $POM_FILE
-  echo '    <repository>' >> $POM_FILE
-  echo '      <id>elastic-lucene-snapshots</id>' >> $POM_FILE
-  echo '      <name>Elastic Lucene Snapshots</name>' >> $POM_FILE
-  echo '      <url>http://s3.amazonaws.com/download.elasticsearch.org/lucenesnapshots/83f9835</url>' >> $POM_FILE
-  echo '      <releases><enabled>true</enabled></releases>' >> $POM_FILE
-  echo '      <snapshots><enabled>false</enabled></snapshots>' >> $POM_FILE
-  echo '    </repository>' >> $POM_FILE
-  echo '  </repositories>' >> $POM_FILE
   echo '</project>' >> $POM_FILE
   popd > /dev/null
 }
