@@ -66,6 +66,11 @@ function generate_pom() {
   echo '  <dependencies>' >> $POM_FILE
 
   for JAR_FILE in `/bin/ls *.jar | grep -v ^$MODULE_NAME` ; do
+    echo "processing $JAR_FILE in "`pwd`
+    #cat build.gradle | grep compile | grep project
+    sed -i 's/project(.:server.)/"org.elasticsearch:elasticsearch:${version}"/g' build.gradle
+    sed -i 's/project(.:client:rest.)/"org.elasticsearch.client:elasticsearch-rest-client:${version}"/g' build.gradle
+    sed -i 's/project(.:libs:elasticsearch-ssl-config.)/"org.elasticsearch:elasticsearch-ssl-config:${version}"/g' build.gradle
     JAR_NAME=`echo $JAR_FILE | sed -e "s/\(.*\)-[0-9].[0-9].*.jar/\1/g"`
     JAR_VERSION=`echo $JAR_FILE | sed -e "s/.*-\([0-9].[0-9].*\).jar/\1/g"`
     CLASSIFIER=`grep :$JAR_NAME:.*: build.gradle | sed -e "s/.*compile.*['\"].*:$JAR_NAME:.*:\(.*\)['\"]/\1/"`
@@ -214,11 +219,11 @@ function deplopy_plugin_classloader() {
   MODULE_DIR=plugin-classloader
   MODULE_NAME=plugin-classloader
   MODULE_TYPE=libs
-  JAR_FILE=`/bin/ls $ES_DIR/lib/plugin-classloader-*.jar 2>/dev/null`
+  JAR_FILE=`/bin/ls $ES_DIR/lib/*plugin-classloader-*.jar 2>/dev/null`
   if [ x"$JAR_FILE" = "x" ] ; then
     return
   fi
-  cp $JAR_FILE $ES_DIR/$MODULE_TYPE/plugin-classloader
+  cp $JAR_FILE $ES_DIR/$MODULE_TYPE/$MODULE_NAME/`basename $JAR_FILE|sed -e "s/elasticsearch-plugin-classloader-/plugin-classloader-/"`
   generate_pom $MODULE_DIR $MODULE_NAME $MODULE_TYPE
   generate_source $MODULE_DIR $MODULE_NAME $MODULE_TYPE
   generate_javadoc $MODULE_DIR $MODULE_NAME $MODULE_TYPE
