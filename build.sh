@@ -14,11 +14,11 @@ if [ x"$BUILD_MODE" = "x" ] ; then
   BUILD_MODE=local
 fi
 
-ES_DIR=elasticsearch-${VERSION}
+BUILD_DIR=`pwd`/target
+ES_DIR=$BUILD_DIR/elasticsearch-${VERSION}
 ES_BINARY_FILE=elasticsearch-oss-${VERSION}-windows-x86_64
 ES_BINARY_URL=https://artifacts.elastic.co/downloads/elasticsearch/${ES_BINARY_FILE}.zip
 ES_SOURCE_URL=https://github.com/elastic/elasticsearch/archive/v${VERSION}.zip
-BUILD_DIR=target
 
 mkdir -p $BUILD_DIR
 cd $BUILD_DIR
@@ -54,7 +54,7 @@ function generate_pom() {
   mv $JAR_FILE `echo $JAR_FILE | sed -e "s/-client//"`
   MODULE_VERSION=`/bin/ls ${MODULE_NAME}*.jar | sed -e "s/^${MODULE_NAME}-\(.*\).jar/\1/"`
   POM_FILE=${MODULE_NAME}-${MODULE_VERSION}.pom
-  GROUP_ID="org.codelibs.elasticsearch."`echo $MODULE_TYPE | sed -e "s/s$//"`
+  GROUP_ID="net.adichad.elasticsearch."`echo $MODULE_TYPE | sed -e "s/s$//"`
 
   echo "Generating $POM_FILE"
   echo '<?xml version="1.0" encoding="UTF-8"?>' > $POM_FILE
@@ -71,25 +71,28 @@ function generate_pom() {
     sed -i 's/project(.:server.)/"org.elasticsearch:elasticsearch:${version}"/g' build.gradle
     sed -i 's/project(.:client:rest.)/"org.elasticsearch.client:elasticsearch-rest-client:${version}"/g' build.gradle
     sed -i 's/project(.:libs:elasticsearch-ssl-config.)/"org.elasticsearch:elasticsearch-ssl-config:${version}"/g' build.gradle
-    JAR_NAME=`echo $JAR_FILE | sed -e "s/\(.*\)-[0-9].[0-9].*.jar/\1/g"`
-    JAR_VERSION=`echo $JAR_FILE | sed -e "s/.*-\([0-9].[0-9].*\).jar/\1/g"`
+    JAR_NAME=`echo $JAR_FILE | perl -0777 -pe "s/(.*?)-([0-9]+([\.-][0-9]+)*([\.-][0-9a-zA-Z]*)?).jar/\1/s"`
+    JAR_VERSION=`echo $JAR_FILE | perl -0777 -pe "s/(.*?)-([0-9]+([\.-][0-9]+)*([\.-][0-9a-zA-Z]*)?).jar/\2/s"`
     CLASSIFIER=`grep :$JAR_NAME:.*: build.gradle | sed -e "s/.*compile.*['\"].*:$JAR_NAME:.*:\(.*\)['\"]/\1/"`
     if [ x"$CLASSIFIER" != "x" ] ; then
       JAR_VERSION=`echo $JAR_VERSION | sed -e "s/\-$CLASSIFIER$//"`
     fi
     GROUP_ID=`grep :$JAR_NAME: build.gradle | sed -e "s/.*compile.*['\"]\(.*\):$JAR_NAME:.*/\1/"`
     if [ x"$JAR_NAME" = "xelasticsearch-scripting-painless-spi" ] ; then
-      GROUP_ID="org.codelibs.elasticsearch.module"
+      GROUP_ID="net.adichad.elasticsearch.module"
       JAR_NAME="scripting-painless-spi"
     elif [ x"$JAR_NAME" = "xelasticsearch-grok" ] ; then
-      GROUP_ID="org.codelibs.elasticsearch.lib"
+      GROUP_ID="net.adichad.elasticsearch.lib"
       JAR_NAME="grok"
     elif [ x"$JAR_NAME" = "xelasticsearch-ssl-config" ] ; then
-      GROUP_ID="org.codelibs.elasticsearch.lib"
+      GROUP_ID="net.adichad.elasticsearch.lib"
       JAR_NAME="ssl-config"
     elif [ x"$JAR_NAME" = "xelasticsearch-dissect" ] ; then
-      GROUP_ID="org.codelibs.elasticsearch.lib"
+      GROUP_ID="net.adichad.elasticsearch.lib"
       JAR_NAME="dissect"
+    elif [ x"$JAR_NAME" = "xelasticsearch-nio" ] ; then
+      GROUP_ID="net.adichad.elasticsearch.lib"
+      JAR_NAME="nio"
     elif [ x"$GROUP_ID" = "x" ] ; then
       POMXML_FILE=`jar tf $JAR_FILE | grep pom.xml`
       jar xf $JAR_FILE $POMXML_FILE
@@ -197,7 +200,7 @@ function deploy_files() {
   popd > /dev/null
 }
 
-function deplopy_lang_paiinless_spi() {
+function deploy_lang_painless_spi() {
   MODULE_DIR=lang-painless/spi
   MODULE_NAME=scripting-painless-spi
   MODULE_TYPE=modules
@@ -215,7 +218,7 @@ function deplopy_lang_paiinless_spi() {
   deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
 }
 
-function deplopy_plugin_classloader() {
+function deploy_plugin_classloader() {
   MODULE_DIR=plugin-classloader
   MODULE_NAME=plugin-classloader
   MODULE_TYPE=libs
@@ -230,7 +233,7 @@ function deplopy_plugin_classloader() {
   deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
 }
 
-function deplopy_grok() {
+function deploy_grok() {
   MODULE_DIR=grok
   MODULE_NAME=grok
   MODULE_TYPE=libs
@@ -245,7 +248,7 @@ function deplopy_grok() {
   deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
 }
 
-function deplopy_ssl_config() {
+function deploy_ssl_config() {
   MODULE_DIR=ssl-config
   MODULE_NAME=ssl-config
   MODULE_TYPE=libs
@@ -260,7 +263,7 @@ function deplopy_ssl_config() {
   deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
 }
 
-function deplopy_dissect() {
+function deploy_dissect() {
   MODULE_DIR=dissect
   MODULE_NAME=dissect
   MODULE_TYPE=libs
@@ -275,11 +278,27 @@ function deplopy_dissect() {
   deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
 }
 
-deplopy_lang_paiinless_spi
-deplopy_plugin_classloader
-deplopy_grok
-deplopy_ssl_config
-deplopy_dissect
+function deploy_nio() {
+  MODULE_DIR=nio
+  MODULE_NAME=nio
+  MODULE_TYPE=libs
+  JAR_FILE=`/bin/ls $ES_DIR/plugins/transport/elasticsearch-nio-*.jar 2>/dev/null`
+  if [ x"$JAR_FILE" = "x" ] ; then
+    return
+  fi
+  cp $JAR_FILE $ES_DIR/$MODULE_TYPE/$MODULE_NAME/`basename $JAR_FILE|sed -e "s/elasticsearch-nio-/nio-/"`
+  generate_pom $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  generate_source $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  generate_javadoc $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+}
+
+deploy_lang_painless_spi
+deploy_plugin_classloader
+deploy_grok
+deploy_ssl_config
+deploy_dissect
+deploy_nio
 
 for MODULE_NAME in `/bin/ls -d ${ES_DIR}/modules/*/ | grep -v x-pack | sed -e "s/.*\/\([^\/]*\)\//\1/"` ; do
   /bin/ls ${ES_DIR}/modules/${MODULE_NAME}/*.jar >/dev/null 2>&1
@@ -292,7 +311,23 @@ for MODULE_NAME in `/bin/ls -d ${ES_DIR}/modules/*/ | grep -v x-pack | sed -e "s
   deploy_files $MODULE_NAME $MODULE_NAME modules
 done
 
+for MODULE_NAME in `/bin/ls -d ${ES_DIR}/plugins/*/ | grep -v x-pack | sed -e "s/.*\/\([^\/]*\)\//\1/"` ; do
+  cd $ES_DIR/plugins/$MODULE_NAME
+  wget https://artifacts.elastic.co/downloads/elasticsearch-plugins/$MODULE_NAME/$MODULE_NAME-$VERSION.zip
+  unzip $MODULE_NAME-$VERSION.zip
+  /bin/ls ${ES_DIR}/plugins/${MODULE_NAME}/*.jar >/dev/null 2>&1
+  if [ $? != 0 ] ; then
+    continue
+  fi
+  generate_pom $MODULE_NAME $MODULE_NAME plugins
+  generate_source $MODULE_NAME $MODULE_NAME plugins
+  generate_javadoc $MODULE_NAME $MODULE_NAME plugins
+  deploy_files $MODULE_NAME $MODULE_NAME plugins
+done
+
 echo "Modules:"
 grep ^classname ${ES_DIR}/modules/*/plugin-descriptor.properties | sed -e "s/.*classname=\(.*\)/\"\1\",/"
 
+echo "Plugins:"
+grep ^classname ${ES_DIR}/plugins/*/plugin-descriptor.properties | sed -e "s/.*classname=\(.*\)/\"\1\",/"
 

@@ -1,4 +1,4 @@
-# Elasticsearch Module
+# Elasticsearch Modules and Plugins
 
 This project provides an environment to build module jar files.
 
