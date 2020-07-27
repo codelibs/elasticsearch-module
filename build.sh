@@ -90,6 +90,12 @@ function generate_pom() {
     elif [ x"$JAR_NAME" = "xelasticsearch-dissect" ] ; then
       GROUP_ID="org.codelibs.elasticsearch.lib"
       JAR_NAME="dissect"
+    elif [ x"$JAR_NAME" = "xelasticsearch-rest-client" ] ; then
+      GROUP_ID="org.elasticsearch.client"
+      JAR_NAME="elasticsearch-rest-client"
+    elif [ x"$JAR_NAME" = "xreindex-client" ] ; then
+      GROUP_ID="org.elasticsearch.plugin"
+      JAR_NAME="reindex-client"
     elif [ x"$GROUP_ID" = "x" ] ; then
       POMXML_FILE=`jar tf $JAR_FILE | grep pom.xml`
       jar xf $JAR_FILE $POMXML_FILE
