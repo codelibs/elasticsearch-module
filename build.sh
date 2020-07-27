@@ -73,11 +73,11 @@ function generate_pom() {
     sed -i 's/project(.:libs:elasticsearch-ssl-config.)/"org.elasticsearch:elasticsearch-ssl-config:${version}"/g' build.gradle
     JAR_NAME=`echo $JAR_FILE | sed -e "s/\(.*\)-[0-9].[0-9].*.jar/\1/g"`
     JAR_VERSION=`echo $JAR_FILE | sed -e "s/.*-\([0-9].[0-9].*\).jar/\1/g"`
-    CLASSIFIER=`grep :$JAR_NAME:.*: build.gradle | sed -e "s/.*compile.*['\"].*:$JAR_NAME:.*:\(.*\)['\"]/\1/"`
+    CLASSIFIER=`grep :$JAR_NAME:.*: build.gradle | sed -e "s/.*\(compile\|api\).*['\"].*:$JAR_NAME:.*:\(.*\)['\"]/\2/"`
     if [ x"$CLASSIFIER" != "x" ] ; then
       JAR_VERSION=`echo $JAR_VERSION | sed -e "s/\-$CLASSIFIER$//"`
     fi
-    GROUP_ID=`grep :$JAR_NAME: build.gradle | sed -e "s/.*compile.*['\"]\(.*\):$JAR_NAME:.*/\1/"`
+    GROUP_ID=`grep :$JAR_NAME: build.gradle | sed -e "s/.*\(compile\|api\).*['\"]\(.*\):$JAR_NAME:.*/\2/"`
     if [ x"$JAR_NAME" = "xelasticsearch-scripting-painless-spi" ] ; then
       GROUP_ID="org.codelibs.elasticsearch.module"
       JAR_NAME="scripting-painless-spi"
