@@ -8,6 +8,3 @@ This project provides an environment to build module jar files.
 
     $ ./build.sh <version>
 
-### Deploy Remote Maven Repository
-
-    $ ./build.sh <version> remote

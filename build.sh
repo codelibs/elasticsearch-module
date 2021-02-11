@@ -1,5 +1,8 @@
 #!/bin/bash
 
+cd `dirname $0`
+BASE_DIR=`pwd`
+
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
@@ -9,20 +12,18 @@ if [ x"$VERSION" = "x" ] ; then
   exit 1
 fi
 
-BUILD_MODE=$2
-if [ x"$BUILD_MODE" = "x" ] ; then
-  BUILD_MODE=local
-fi
-
-ES_DIR=elasticsearch-${VERSION}
+BUILD_DIR=$BASE_DIR/target
+ES_DIR=$BUILD_DIR/elasticsearch-${VERSION}
 ES_BINARY_FILE=elasticsearch-oss-${VERSION}-windows-x86_64
 ES_BINARY_URL=https://artifacts.elastic.co/downloads/elasticsearch/${ES_BINARY_FILE}.zip
 ES_SOURCE_URL=https://github.com/elastic/elasticsearch/archive/v${VERSION}.zip
-BUILD_DIR=target
+REPO_DIR=$BUILD_DIR/repository
 
 mkdir -p $BUILD_DIR
+rm -rf $ES_DIR $REPO_DIR
+mkdir -p $ES_DIR $REPO_DIR
+
 cd $BUILD_DIR
-rm -rf $ES_DIR
 
 # Download source zip
 if [ ! -f v${VERSION}.zip ] ; then
@@ -188,17 +189,14 @@ function deploy_files() {
   SOURCE_FILE=${MODULE_NAME}-${MODULE_VERSION}-sources.jar
   JAVADOC_FILE=${MODULE_NAME}-${MODULE_VERSION}-javadoc.jar
 
-  if [ x"$BUILD_MODE" = "xlocal" ] ; then
-    echo "Deploying $POM_FILE to a local repository"
-    mvn install:install-file -Dfile=$BINARY_FILE -DpomFile=$POM_FILE
-    mvn install:install-file -Dfile=$SOURCE_FILE -DpomFile=$POM_FILE -Dclassifier=sources
-    mvn install:install-file -Dfile=$JAVADOC_FILE -DpomFile=$POM_FILE -Dclassifier=javadoc
-  elif [ x"$BUILD_MODE" = "xremote" ] ; then
-    echo "Deploying $POM_FILE to a local repository"
-    mvn gpg:sign-and-deploy-file -Durl=https://oss.sonatype.org/service/local/staging/deploy/maven2/ -DrepositoryId=sonatype-nexus-staging -DpomFile=$POM_FILE -Dfile=$BINARY_FILE
-    mvn gpg:sign-and-deploy-file -Durl=https://oss.sonatype.org/service/local/staging/deploy/maven2/ -DrepositoryId=sonatype-nexus-staging -DpomFile=$POM_FILE -Dfile=$SOURCE_FILE -Dclassifier=sources
-    mvn gpg:sign-and-deploy-file -Durl=https://oss.sonatype.org/service/local/staging/deploy/maven2/ -DrepositoryId=sonatype-nexus-staging -DpomFile=$POM_FILE -Dfile=$JAVADOC_FILE -Dclassifier=javadoc
-  fi
+  echo "Deploying $POM_FILE to a local repository"
+  mvn install:install-file -Dfile=$BINARY_FILE -DpomFile=$POM_FILE
+  mvn install:install-file -Dfile=$SOURCE_FILE -DpomFile=$POM_FILE -Dclassifier=sources
+  mvn install:install-file -Dfile=$JAVADOC_FILE -DpomFile=$POM_FILE -Dclassifier=javadoc
+  echo "Deploying $POM_FILE to a local repository"
+  mvn deploy:deploy-file -Dgpg.skip=false -Durl=file:$REPO_DIR -Dfile=$BINARY_FILE -DpomFile=$POM_FILE
+  mvn deploy:deploy-file -Dgpg.skip=false -Durl=file:$REPO_DIR -Dfile=$SOURCE_FILE -DpomFile=$POM_FILE -Dclassifier=sources
+  mvn deploy:deploy-file -Dgpg.skip=false -Durl=file:$REPO_DIR -Dfile=$JAVADOC_FILE -DpomFile=$POM_FILE -Dclassifier=javadoc
 
   popd > /dev/null
 }
