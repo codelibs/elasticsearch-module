@@ -14,7 +14,7 @@ fi
 
 BUILD_DIR=$BASE_DIR/target
 ES_DIR=$BUILD_DIR/elasticsearch-${VERSION}
-ES_BINARY_FILE=elasticsearch-oss-${VERSION}-windows-x86_64
+ES_BINARY_FILE=elasticsearch-${VERSION}-windows-x86_64
 ES_BINARY_URL=https://artifacts.elastic.co/downloads/elasticsearch/${ES_BINARY_FILE}.zip
 ES_SOURCE_URL=https://github.com/elastic/elasticsearch/archive/v${VERSION}.zip
 REPO_DIR=$BUILD_DIR/repository
@@ -44,6 +44,8 @@ if [ ! -f ${ES_BINARY_FILE}.zip ] ; then
   exit 1
 fi
 unzip -n ${ES_BINARY_FILE}.zip > /dev/null
+
+rm -r $ES_DIR/x-pack
 
 function generate_pom() {
   MODULE_DIR=$1
@@ -285,7 +287,8 @@ deplopy_grok
 deplopy_ssl_config
 deplopy_dissect
 
-for MODULE_NAME in `/bin/ls -d ${ES_DIR}/modules/*/ | grep -v x-pack | sed -e "s/.*\/\([^\/]*\)\//\1/"` ; do
+MODULE_NAMES=`ls ${ES_DIR}/modules/*/build.gradle | sed -e "s,.*/\([^/]*\)/build.gradle,\1,"`
+for MODULE_NAME in $MODULE_NAMES ; do
   /bin/ls ${ES_DIR}/modules/${MODULE_NAME}/*.jar >/dev/null 2>&1
   if [ $? != 0 ] ; then
     continue
@@ -297,6 +300,6 @@ for MODULE_NAME in `/bin/ls -d ${ES_DIR}/modules/*/ | grep -v x-pack | sed -e "s
 done
 
 echo "Modules:"
-grep ^classname ${ES_DIR}/modules/*/plugin-descriptor.properties | sed -e "s/.*classname=\(.*\)/\"\1\",/"
-
+pushd $REPO_DIR/org/codelibs/elasticsearch
+find * -type f | grep pom$
 
