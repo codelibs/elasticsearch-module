@@ -207,14 +207,12 @@ function deplopy_lang_paiinless_spi() {
   MODULE_DIR=lang-painless/spi
   MODULE_NAME=scripting-painless-spi
   MODULE_TYPE=modules
-  JAR_FILE=`/bin/ls $ES_DIR/$MODULE_TYPE/lang-painless/elasticsearch-scripting-painless-spi-*.jar 2>/dev/null`
+  JAR_FILE=`/bin/ls $ES_DIR/$MODULE_TYPE/lang-painless/spi/elasticsearch-scripting-painless-spi-*.jar 2>/dev/null`
   if [ x"$JAR_FILE" = "x" ] ; then
     return
   fi
-  NEW_JAR_FILE=`echo $JAR_FILE | sed -e "s/elasticsearch-scripting-painless-spi/spi\/scripting-painless-spi/"`
-  ES_JAR_FILE=`echo $JAR_FILE | sed -e "s/elasticsearch-scripting-painless-spi/spi\/elasticsearch/"`
+  NEW_JAR_FILE=`echo $JAR_FILE | sed -e "s/elasticsearch-scripting-painless-spi-/scripting-painless-spi-/"`
   cp $JAR_FILE $NEW_JAR_FILE
-  touch $ES_JAR_FILE
   generate_pom $MODULE_DIR $MODULE_NAME $MODULE_TYPE
   generate_source $MODULE_DIR $MODULE_NAME $MODULE_TYPE
   generate_javadoc $MODULE_DIR $MODULE_NAME $MODULE_TYPE
