@@ -96,9 +96,9 @@ function generate_pom() {
     elif [ x"$JAR_NAME" = "xelasticsearch-rest-client" ] ; then
       GROUP_ID="org.elasticsearch.client"
       JAR_NAME="elasticsearch-rest-client"
-    elif [ x"$JAR_NAME" = "xreindex-client" ] ; then
-      GROUP_ID="org.elasticsearch.plugin"
-      JAR_NAME="reindex-client"
+    elif [ x"$JAR_NAME" = "xreindex" ] ; then
+      GROUP_ID="org.codelibs.elasticsearch.module"
+      JAR_NAME="reindex"
     elif [ x"$GROUP_ID" = "x" ] ; then
       POMXML_FILE=`jar tf $JAR_FILE | grep pom.xml`
       jar xf $JAR_FILE $POMXML_FILE
@@ -120,6 +120,15 @@ function generate_pom() {
     fi
     echo '    </dependency>' >> $POM_FILE
   done
+
+  if [[ ${MODULE_NAME} = "lz4" ]] ; then
+    echo '    <dependency>' >> $POM_FILE
+    echo '      <groupId>org.lz4</groupId>' >> $POM_FILE
+    echo '      <artifactId>lz4-java</artifactId>' >> $POM_FILE
+    echo '      <version>1.8.0</version>' >> $POM_FILE
+    echo '    </dependency>' >> $POM_FILE
+
+  fi
 
   echo '  </dependencies>' >> $POM_FILE
   echo '  <inceptionYear>2009</inceptionYear>' >> $POM_FILE
@@ -234,6 +243,21 @@ function deplopy_plugin_classloader() {
   deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
 }
 
+function deplopy_lz4() {
+  MODULE_DIR=lz4
+  MODULE_NAME=lz4
+  MODULE_TYPE=libs
+  JAR_FILE=`/bin/ls $ES_DIR/lib/*-lz4-*.jar 2>/dev/null`
+  if [ x"$JAR_FILE" = "x" ] ; then
+    return
+  fi
+  cp $JAR_FILE $ES_DIR/$MODULE_TYPE/$MODULE_NAME/`basename $JAR_FILE|sed -e "s/elasticsearch-lz4-/lz4-/"`
+  generate_pom $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  generate_source $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  generate_javadoc $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+}
+
 function deplopy_grok() {
   MODULE_DIR=grok
   MODULE_NAME=grok
@@ -281,6 +305,7 @@ function deplopy_dissect() {
 
 deplopy_lang_paiinless_spi
 deplopy_plugin_classloader
+deplopy_lz4
 deplopy_grok
 deplopy_ssl_config
 deplopy_dissect
