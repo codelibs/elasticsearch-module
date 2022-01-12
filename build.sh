@@ -125,8 +125,8 @@ function generate_pom() {
   echo '  <inceptionYear>2009</inceptionYear>' >> $POM_FILE
   echo '  <licenses>' >> $POM_FILE
   echo '    <license>' >> $POM_FILE
-  echo '      <name>The Apache Software License, Version 2.0</name>' >> $POM_FILE
-  echo '      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>' >> $POM_FILE
+  echo '      <name>Server Side Public License (SSPL) version 1</name>' >> $POM_FILE
+  echo '      <url>https://www.mongodb.com/licensing/server-side-public-license</url>' >> $POM_FILE
   echo '      <distribution>repo</distribution>' >> $POM_FILE
   echo '    </license>' >> $POM_FILE
   echo '  </licenses>' >> $POM_FILE
