@@ -121,6 +121,14 @@ function generate_pom() {
     echo '    </dependency>' >> $POM_FILE
   done
 
+  if [[ "$MODULE_NAME" = "lang-painless" ]] ; then
+    echo '    <dependency>' >> $POM_FILE
+    echo '      <groupId>org.codelibs.elasticsearch.module</groupId>' >> $POM_FILE
+    echo '      <artifactId>scripting-painless-spi</artifactId>' >> $POM_FILE
+    echo '      <version>'$MODULE_VERSION'</version>' >> $POM_FILE
+    echo '    </dependency>' >> $POM_FILE
+  fi
+
   echo '  </dependencies>' >> $POM_FILE
   echo '  <inceptionYear>2009</inceptionYear>' >> $POM_FILE
   echo '  <licenses>' >> $POM_FILE
