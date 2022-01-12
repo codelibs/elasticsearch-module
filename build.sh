@@ -127,7 +127,12 @@ function generate_pom() {
     echo '      <artifactId>lz4-java</artifactId>' >> $POM_FILE
     echo '      <version>1.8.0</version>' >> $POM_FILE
     echo '    </dependency>' >> $POM_FILE
-
+  elif [[ "$MODULE_NAME" = "lang-painless" ]] ; then
+    echo '    <dependency>' >> $POM_FILE
+    echo '      <groupId>org.codelibs.elasticsearch.module</groupId>' >> $POM_FILE
+    echo '      <artifactId>scripting-painless-spi</artifactId>' >> $POM_FILE
+    echo '      <version>'$MODULE_VERSION'</version>' >> $POM_FILE
+    echo '    </dependency>' >> $POM_FILE
   fi
 
   echo '  </dependencies>' >> $POM_FILE
