@@ -141,11 +141,11 @@ function generate_pom() {
   echo '  <developers>' >> $POM_FILE
   echo '    <developer>' >> $POM_FILE
   echo '      <name>Elastic</name>' >> $POM_FILE
-  echo '      <url>http://www.elastic.co</url>' >> $POM_FILE
+  echo '      <url>https://www.elastic.co</url>' >> $POM_FILE
   echo '    </developer>' >> $POM_FILE
   echo '    <developer>' >> $POM_FILE
   echo '      <name>CodeLibs</name>' >> $POM_FILE
-  echo '      <url>http://www.codelibs.org/</url>' >> $POM_FILE
+  echo '      <url>https://www.codelibs.org/</url>' >> $POM_FILE
   echo '    </developer>' >> $POM_FILE
   echo '  </developers>' >> $POM_FILE
   echo '  <name>'$MODULE_NAME'</name>' >> $POM_FILE
