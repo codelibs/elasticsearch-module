@@ -74,13 +74,17 @@ function generate_pom() {
     sed -i 's/project(.:server.)/"org.elasticsearch:elasticsearch:${version}"/g' build.gradle
     sed -i 's/project(.:client:rest.)/"org.elasticsearch.client:elasticsearch-rest-client:${version}"/g' build.gradle
     sed -i 's/project(.:libs:elasticsearch-ssl-config.)/"org.elasticsearch:elasticsearch-ssl-config:${version}"/g' build.gradle
-    JAR_NAME=`echo $JAR_FILE | sed -e "s/\(.*\)-[0-9].[0-9].*.jar/\1/g"`
-    JAR_VERSION=`echo $JAR_FILE | sed -e "s/.*-\([0-9].[0-9].*\).jar/\1/g"`
-    CLASSIFIER=`grep :$JAR_NAME:.*: build.gradle | sed -e "s/.*\(compile\|api\|implementation\).*['\"].*:$JAR_NAME:.*:\(.*\)['\"]/\2/"`
+    JAR_NAME=`echo $JAR_FILE | sed -e "s/\(.*\)-[0-9][0-9]*\.[0-9][0-9]*.*.jar/\1/g"`
+    JAR_VERSION=`echo $JAR_FILE | sed -e "s/.*-\([0-9][0-9]*\.[0-9][0-9]*.*\).jar/\1/g"`
+    if echo $JAR_NAME | grep google-api-services-storage; then
+      JAR_VERSION=$(echo $JAR_NAME | sed -e "s/google-api-services-storage-//")-$JAR_VERSION
+      JAR_NAME=google-api-services-storage
+    fi
+    CLASSIFIER=`grep :$JAR_NAME:.*: build.gradle | uniq | sed -e "s/.*\(compile\|api\|implementation\|runtimeOnly\).*['\"].*:$JAR_NAME:.*:\(.*\)['\"]/\2/"`
     if [ x"$CLASSIFIER" != "x" ] ; then
       JAR_VERSION=`echo $JAR_VERSION | sed -e "s/\-$CLASSIFIER$//"`
     fi
-    GROUP_ID=`grep :$JAR_NAME: build.gradle | sed -e "s/.*\(compile\|api\|implementation\).*['\"]\(.*\):$JAR_NAME:.*/\2/"`
+    GROUP_ID=`grep :$JAR_NAME: build.gradle | uniq | sed -e "s/.*\(compile\|api\|implementation\|runtimeOnly\).*['\"]\(.*\):$JAR_NAME:.*/\2/"`
     if [ x"$JAR_NAME" = "xelasticsearch-scripting-painless-spi" ] ; then
       GROUP_ID="org.codelibs.elasticsearch.module"
       JAR_NAME="scripting-painless-spi"
@@ -105,6 +109,9 @@ function generate_pom() {
       GROUP_ID=`cat $POMXML_FILE | xmllint --format - | sed -e "s/<project [^>]*>/<project>/" | xmllint --xpath "/project/groupId/text()" -`
       if [ x"$GROUP_ID" = "x" ] ; then
         GROUP_ID=`cat $POMXML_FILE | xmllint --format - | sed -e "s/<project [^>]*>/<project>/" | xmllint --xpath "/project/parent/groupId/text()" -`
+      fi
+      if [ x"$JAR_NAME" = "xazure-storage-blob" ] ; then
+        JAR_VERSION=`cat $POMXML_FILE | xmllint --format - | sed -e "s/<project [^>]*>/<project>/" | xmllint --xpath "/project/version/text()" -`
       fi
     fi
     if [ x"$GROUP_ID" = "x" -o x"$JAR_VERSION" = "x" ] ; then
