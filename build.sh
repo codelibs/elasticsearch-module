@@ -103,8 +103,14 @@ function generate_pom() {
     elif [ x"$JAR_NAME" = "xreindex" ] ; then
       GROUP_ID="org.codelibs.elasticsearch.module"
       JAR_NAME="reindex"
+    elif [ x"$JAR_NAME" = "xdata-streams" ] ; then
+      GROUP_ID="org.codelibs.elasticsearch.module"
+      JAR_NAME="data-streams"
+    elif [ x"$JAR_NAME" = "xtransport-netty4" ] ; then
+      GROUP_ID="org.codelibs.elasticsearch.module"
+      JAR_NAME="transport-netty4"
     elif [ x"$GROUP_ID" = "x" ] ; then
-      POMXML_FILE=`jar tf $JAR_FILE | grep pom.xml`
+      POMXML_FILE=`jar tf $JAR_FILE | grep $JAR_NAME | grep pom.xml`
       jar xf $JAR_FILE $POMXML_FILE
       GROUP_ID=`cat $POMXML_FILE | xmllint --format - | sed -e "s/<project [^>]*>/<project>/" | xmllint --xpath "/project/groupId/text()" -`
       if [ x"$GROUP_ID" = "x" ] ; then
@@ -320,12 +326,28 @@ function deplopy_dissect() {
   deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
 }
 
+function deplopy_preallocate() {
+  MODULE_DIR=preallocate
+  MODULE_NAME=preallocate
+  MODULE_TYPE=libs
+  JAR_FILE=`/bin/ls $ES_DIR/lib/*-preallocate-*.jar 2>/dev/null`
+  if [ x"$JAR_FILE" = "x" ] ; then
+    return
+  fi
+  cp $JAR_FILE $ES_DIR/$MODULE_TYPE/$MODULE_NAME/`basename $JAR_FILE|sed -e "s/elasticsearch-preallocate-/preallocate-/"`
+  generate_pom $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  generate_source $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  generate_javadoc $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+  deploy_files $MODULE_DIR $MODULE_NAME $MODULE_TYPE
+}
+
 deplopy_lang_paiinless_spi
 deplopy_plugin_classloader
 deplopy_lz4
 deplopy_grok
 deplopy_ssl_config
 deplopy_dissect
+deplopy_preallocate
 
 MODULE_NAMES=`ls ${ES_DIR}/modules/*/build.gradle | sed -e "s,.*/\([^/]*\)/build.gradle,\1,"`
 for MODULE_NAME in $MODULE_NAMES ; do
